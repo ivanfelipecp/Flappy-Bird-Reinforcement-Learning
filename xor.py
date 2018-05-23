@@ -17,10 +17,9 @@ class XorNet(nn.Module):
 
 m = XorNet()
 loss_fn = nn.MSELoss()
-optimizer = optim.Adam(m.parameters(), lr=1e-3)
+optimizer = optim.Adam(m.parameters(), lr=0.0085)
 
 training_epochs = 3000
-minibatch_size = 32
 
 # input-output pairs
 pairs = [(np.asarray([0.0,0.0]), [0.0]),
