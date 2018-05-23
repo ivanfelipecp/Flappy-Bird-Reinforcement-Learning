@@ -9,6 +9,9 @@ light_color = 200
 dark_color = [66,74]
 tam_percent = 0.25
 directory = "./images/"
+zero = 0
+one = 1
+white = 255
 
 def rgb_2_grayscale(ob):
     img = cv2.cvtColor(ob, cv2.COLOR_RGB2GRAY)
@@ -16,9 +19,13 @@ def rgb_2_grayscale(ob):
 
 def resize_image(img):
     img = scipy.misc.imresize(img, tam_percent)
+    #img = numpy.resize
     # Cambiar aquí para valores finales
-    img[img < 200] = dark_color[0]
-    img[img > 200] = light_color
+    temp = 999
+    img[img > 200] = temp#light_color
+    img[img < 200] = 0#dark_color[0]
+    img[img == temp] = white
+    
     return img
 
 def ob_2_gray(ob):
@@ -33,8 +40,9 @@ def new_select_zone(ob):
     
     # Para dejarlo en dos colores
     img = rgb_2_grayscale(ob)
-    img[img == dark_color[1]] = dark_color[0]
-    img[img != dark_color[0]] = light_color
+    img[img == dark_color[0]] = one
+    img[img == dark_color[1]] = one#dark_color[0]
+    img[img != one] = zero#light_color
 
     # Shapes
     m = img.shape[0]
@@ -44,7 +52,7 @@ def new_select_zone(ob):
     flag = False
     cont = 0
     for i in range(n):
-        if img[0][i] == dark_color[0]:
+        if img[0][i] == one:
             cont += 1
             if cont == 2:
                 flag = True
@@ -53,16 +61,16 @@ def new_select_zone(ob):
                 flag = False
         if flag:
             # Arriba
-            img[0][i] = dark_color[0]
+            img[0][i] = one
             # Abajo
-            img[m-1][i] = dark_color[0]
+            img[m-1][i] = one
 
     for i in range(m):
-        img[i][0] = dark_color[0]
-        img[i][n-1] = dark_color[0]
+        img[i][0] = one
+        img[i][n-1] = one
     # Se pasa a binario y después se inverte otra vez
-    img[img == dark_color[0]] = 1
-    img[img == light_color] = 0
+    #img[img == one] = 1
+    #img[img == white] = 0
 
     #return img
 
@@ -71,6 +79,6 @@ def new_select_zone(ob):
     #return img
 
     # Se invierte la jugada
-    img[img == 1] = dark_color[0]
-    img[img == 0] = light_color
+    img[img == 1] = white#dark_color[0]
+    #img[img == 0] = light_color
     return img
