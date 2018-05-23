@@ -28,11 +28,9 @@ for i in range(episode_count):
         if done:
             break
 
-        img = image_functions.ob_2_gray(ob)
-        image_functions.save_image(img,"save"+str(cont))
-        #if cont == 20:
-        #    print(img)
-        #    sys.exit("cya")
+        # img = image_functions.ob_2_gray(ob)
+        # image_functions.save_image(img,"save"+str(cont))
+
         #env.render()
 
 env.close()
