@@ -17,7 +17,7 @@ class XorNet(nn.Module):
 
 m = XorNet()
 loss_fn = nn.MSELoss()
-optimizer = optim.Adam(m.parameters(), lr=0.0085)
+optimizer = optim.Adam(m.parameters(), lr=1e-3)
 
 training_epochs = 3000
 

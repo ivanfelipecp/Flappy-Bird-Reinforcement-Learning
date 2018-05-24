@@ -19,11 +19,10 @@ def rgb_2_grayscale(ob):
 
 def resize_image(img):
     img = scipy.misc.imresize(img, tam_percent)
-    #img = numpy.resize
     # Cambiar aquí para valores finales
     temp = 999
-    img[img > 200] = temp#light_color
-    img[img < 200] = 0#dark_color[0]
+    img[img > 200] = temp
+    img[img < 200] = 0
     img[img == temp] = white
     
     return img
@@ -41,8 +40,8 @@ def new_select_zone(ob):
     # Para dejarlo en dos colores
     img = rgb_2_grayscale(ob)
     img[img == dark_color[0]] = one
-    img[img == dark_color[1]] = one#dark_color[0]
-    img[img != one] = zero#light_color
+    img[img == dark_color[1]] = one
+    img[img != one] = zero
 
     # Shapes
     m = img.shape[0]
@@ -68,17 +67,10 @@ def new_select_zone(ob):
     for i in range(m):
         img[i][0] = one
         img[i][n-1] = one
-    # Se pasa a binario y después se inverte otra vez
-    #img[img == one] = 1
-    #img[img == white] = 0
-
-    #return img
-
+    
     # Se filean los holes
     img = binary_fill_holes(img).astype(int)
-    #return img
-
+    
     # Se invierte la jugada
-    img[img == 1] = white#dark_color[0]
-    #img[img == 0] = light_color
+    img[img == 1] = white
     return img
