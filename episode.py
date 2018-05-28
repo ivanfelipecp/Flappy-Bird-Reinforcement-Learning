@@ -15,26 +15,18 @@ class Episode():
         self.rewards = []
 
     def add_info(self, ob, action, reward):
-        self.states += [image_functions.ob_2_gray(ob)]
+        # Resta la observación actual con la anterior
+        
+        self.states += [image_functions.ob_2_gray(new_ob).ravel()]
         self.actions += [[1,0] if action == 0 else [0,1]]
         self.rewards += [reward]
 
-    def do(self):
-        self.states = self.new_states()
-        self.rewards = self.new_rewards()
-        
-        print(self.rewards)
-        sys.exit("adansito")
-
-    def new_states(self):
-        new_states = []
-        m = len(self.states)
-        for i in range(1,m):
-            new_states += [np.abs(self.states[i]-self.states[i-1]).astype(np.uint8)]
-            image_functions.save_image(new_states[-1],"adancito"+str(i))
-        return new_states
+    def pre_finish(self):
+        self.rewards = self.set_rewards()
+        #print(self.rewards)
+        sys.exit("cya")
     
-    def new_rewards(self):
+    def set_rewards(self):
         positive_reward = 1
         negative_reward = -1
         new_rewards = []
@@ -45,4 +37,4 @@ class Episode():
                 flag = True
             new_rewards = [positive_reward if flag else negative_reward] + new_rewards
 
-        return new_rewards
+        self.rewards = new_rewards

@@ -7,7 +7,7 @@ import cv2
 
 light_color = 200
 dark_color = [66,74]
-tam_percent = 0.25
+dim = (100,100)
 directory = "./images/"
 zero = 0
 one = 1
@@ -18,7 +18,7 @@ def rgb_2_grayscale(ob):
     return img[:404]
 
 def resize_image(img):
-    img = scipy.misc.imresize(img, tam_percent)
+    img = scipy.misc.imresize(img, dim)
     # Cambiar aquí para valores finales
     temp = 999
     img[img > 200] = temp
