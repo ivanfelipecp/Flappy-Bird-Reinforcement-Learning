@@ -76,14 +76,18 @@ def end_of_episode():
     policy_loss = []
     rewards = []
     discount_reward = 0
+    flag = True
     for r in policy.rewards[::-1]:
+        if r > 0 and flag:
+            discount_reward = 0
+            flag = False
         discount_reward = r + gamma * discount_reward
         rewards.insert(0, discount_reward)
     
     #Convierte los rewards a tensor
     rewards = torch.tensor(rewards)
     # Normaliza el tensor
-    rewards = (rewards - rewards.mean()) / (rewards.std())
+    rewards = (rewards - rewards.mean()) / (rewards.std() + eps)
 
     # Saca el policy loss
     for log_prob, reward in zip(policy.saved_log_probs, rewards):
@@ -103,13 +107,11 @@ def end_of_episode():
 
 env = gym.make('FlappyBird-v0' if len(sys.argv)<2 else sys.argv[1])
 episode_count = 10000
-cont = 0
 for i in range(episode_count):
     # Agregarla
     last_ob = env.reset()
     #print("Inicio del episodio",i)
     while True:
-        cont += 1
         # 0 va hacia arriba, 1 para abajo
         #agent.act(ob, reward, done)
         last_ob_gray = image_functions.ob_2_gray(last_ob).ravel()        
