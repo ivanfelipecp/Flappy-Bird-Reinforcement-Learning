@@ -17,35 +17,40 @@ from torch.distributions import Categorical
 class Policy(nn.Module):
     def __init__(self):
         super(Policy, self).__init__()
-        # Entrada -> batch_size x 1000
-        self.h1 = nn.Linear(10000,10)
-        self.h2 = nn.Linear(10,1)
-        self.h3 = nn.Linear(1,2)
+        self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
+        self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
+        self.conv2_drop = nn.Dropout2d()
+        self.fc1 = nn.Linear(10000, 256)
+        self.fc2 = nn.Linear(256, 2)
+        #self.fc = nn.Linear(64, 2)
 
         self.saved_log_probs = []
         self.rewards = []
         self.states = []
 
-
-    def forward(self, state):
-        x = F.relu(self.h1(state))
-        x = F.relu(self.h2(x))
-        x = F.relu(self.h3(x))
-        x = F.softmax(x, dim=1)
-        return x
+    def forward(self, x):
+        a = self.conv1(x)
+        x = F.relu(F.max_pool2d(self.conv1(x), 2))
+        print("lego")
+        x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
+        x = x.view(-1, 10000)
+        x = F.relu(self.fc1(x))
+        x = F.dropout(x, training = self.training)
+        x = self.fc2(x)
+        return F.log_softmax(x, dim = 1)
 
     def pre_end(self):
-        positive_reward = 1
+        positive_reward = 5
         negative_reward = -1
         new_rewards = []
         flag = False
         m = len(self.rewards)
         for i in reversed(range(m)):
-            if self.rewards[i] == positive_reward:
+            if self.rewards[i] > 0:
                 flag = True
             new_rewards = [positive_reward if flag else negative_reward] + new_rewards
 
-        self.rewards = new_rewards
+        self.rewards = new_rewards        
 
 # Declaramos la red y el optimizador
 policy = Policy()
@@ -53,7 +58,7 @@ try:
     policy.load_state_dict(torch.load('weights'))
 except:
     print("No se pudieron cargar los pesos")
-optimizer = optim.Adam(policy.parameters(), lr=1e-2)
+optimizer = optim.SGD(policy.parameters(), lr=0.0085, momentum=0.9)
 eps = np.finfo(np.float32).eps.item()
 
 # Funciones aca
@@ -99,13 +104,14 @@ def end_of_episode():
     optimizer.step()
     del policy.rewards[:]
     del policy.saved_log_probs[:]
-    return policy_loss.data[0]
+    return policy_loss.item()
 # Fin Funciones
 
 
 # Ambiente
 
 env = gym.make('FlappyBird-v0' if len(sys.argv)<2 else sys.argv[1])
+#print(env.spec.reward_threshold)
 episode_count = 10000
 for i in range(episode_count):
     # Agregarla
@@ -123,7 +129,7 @@ for i in range(episode_count):
         policy.states.append(last_ob_gray)
         policy.rewards.append(reward)
         last_ob = np.abs(ob - last_ob)
-        #env.render()
+        env.render()
     
     policy.pre_end()
     loss = end_of_episode()

@@ -1,5 +1,6 @@
 import numpy as np
 import scipy
+import sys
 from scipy.ndimage.morphology import binary_fill_holes
 from skimage.transform import resize
 from PIL import Image
@@ -12,9 +13,15 @@ directory = "./images/"
 zero = 0
 one = 1
 white = 255
+cont = 0
 
 def rgb_2_grayscale(ob):
+    global cont
     img = cv2.cvtColor(ob, cv2.COLOR_RGB2GRAY)
+    img = img[:404]
+    #a = img[:,54:]
+    #save_image(a, str(cont))
+    cont += 1
     return img[:404]
 
 def resize_image(img):
@@ -29,6 +36,7 @@ def resize_image(img):
 
 def ob_2_gray(ob):
     img = new_select_zone(ob)
+    #sys.exit("cyaaa")
     return resize_image(img)
 
 def save_image(img,name):
