@@ -13,40 +13,33 @@ directory = "./images/"
 zero = 0
 one = 1
 white = 255
-cont = 0
+g = 0
 
 def rgb_2_grayscale(ob):
     global cont
     img = cv2.cvtColor(ob, cv2.COLOR_RGB2GRAY)
     img = img[:404]
-    #a = img[:,54:]
-    #save_image(a, str(cont))
-    cont += 1
-    return img[:404]
+
+    return img
 
 def resize_image(img):
     img = scipy.misc.imresize(img, dim)
-    # Cambiar aquí para valores finales
     temp = 999
     img[img > 200] = temp
     img[img < 200] = 0
     img[img == temp] = white
-    
     return img
 
 def ob_2_gray(ob):
     img = new_select_zone(ob)
-    #sys.exit("cyaaa")
     return resize_image(img)
 
 def save_image(img,name):
     cv2.imwrite(directory+name+".png", img)
 
 def new_select_zone(ob):
-    # Dimensiones
-    
     # Para dejarlo en dos colores
-    img = rgb_2_grayscale(ob)
+    img = rgb_2_grayscale(ob) #descomentar esta
     img[img == dark_color[0]] = one
     img[img == dark_color[1]] = one
     img[img != one] = zero
@@ -55,10 +48,22 @@ def new_select_zone(ob):
     m = img.shape[0]
     n = img.shape[1]
 
-    # Arriba y Abajo, works
+    pixel = 45
+    aux = 0
+    for i in reversed(range(pixel)):
+        if img[0][i] == 1:
+            aux += 1
+        if aux == 2:
+            img[0][0:i] = 1
+            img[n-1][0:i] = 1
+            pixel = i+1
+            #print("HIZO LA PIIIIICHA")
+            break
+
     flag = False
+    pixel = 0 if aux != 0 else pixel
     cont = 0
-    for i in range(n):
+    for i in range(pixel, n):
         if img[0][i] == one:
             cont += 1
             if cont == 2:
@@ -75,10 +80,12 @@ def new_select_zone(ob):
     for i in range(m):
         img[i][0] = one
         img[i][n-1] = one
+
     
     # Se filean los holes
     img = binary_fill_holes(img).astype(int)
     
     # Se invierte la jugada
     img[img == 1] = white
+
     return img

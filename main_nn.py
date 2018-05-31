@@ -1,137 +1,123 @@
+import argparse
 import sys
-import image_functions
-import random
 import gym
 import gym_ple
 import numpy as np
-import image_functions
-import cv2
+from itertools import count
+from collections import namedtuple
+import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import image_functions
-from torch.autograd import Variable
 from torch.distributions import Categorical
+import image_functions
+
+parser = argparse.ArgumentParser(description='PyTorch actor-critic example')
+parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
+                    help='discount factor (default: 0.99)')
+parser.add_argument('--seed', type=int, default=543, metavar='N',
+                    help='random seed (default: 1)')
+parser.add_argument('--render', action='store_true',
+                    help='render the environment')
+parser.add_argument('--log-interval', type=int, default=10, metavar='N',
+                    help='interval between training status logs (default: 10)')
+args = parser.parse_args()
+
+
+env = gym.make('FlappyBird-v0')
+env.seed(args.seed)
+torch.manual_seed(args.seed)
+weights_file = "weights"
+
+SavedAction = namedtuple('SavedAction', ['log_prob', 'value'])
+
 
 class Policy(nn.Module):
     def __init__(self):
         super(Policy, self).__init__()
-        # Entrada -> batch_size x 1000
-        self.h1 = nn.Linear(10000,128)
-        self.h2 = nn.Linear(128,64)
-        self.h3 = nn.Linear(64,2)
+        self.affine1 = nn.Linear(10000, 128)
+        self.action_head = nn.Linear(128, 2)
+        self.value_head = nn.Linear(128, 1)
 
-        self.saved_log_probs = []
+        self.saved_actions = []
         self.rewards = []
-        self.states = []
 
-    def forward(self, state):
-        x = F.relu(self.h1(state))
-        x = F.relu(self.h2(x))
-        x = self.h3(x)
-        x = F.softmax(x, dim=1)
-        return x
-
-    def pre_end(self):
-        positive_reward = 5
-        negative_reward = -1
-        new_rewards = []
-        flag = False
-        m = len(self.rewards)
-        for i in reversed(range(m)):
-            if self.rewards[i] > 0:
-                flag = True
-            new_rewards = [positive_reward if flag else negative_reward] + new_rewards
-
-        self.rewards = new_rewards        
+    def forward(self, x):
+        x = F.relu(self.affine1(x))
+        action_scores = self.action_head(x)
+        state_values = self.value_head(x)
+        return F.softmax(action_scores, dim=-1), state_values
 
 # Declaramos la red y el optimizador
-policy = Policy()
+model = Policy()
 try:
-    policy.load_state_dict(torch.load('weights'))
+    model.load_state_dict(torch.load(weights_file))
 except:
     print("No se pudieron cargar los pesos")
-optimizer = optim.Adam(policy.parameters(), lr=0.0085)
+optimizer = optim.Adam(model.parameters(), lr=0.0085)
 eps = np.finfo(np.float32).eps.item()
 
-# Funciones aca
 
 def select_action(state):
-    state = torch.from_numpy(state).float().unsqueeze(0)
-    # Hace forwards para obtener dos resultados
-    probs = policy(state)
-    # Esto es para escoger la probabilidad más alta
+    state = torch.from_numpy(state).float()
+    probs, state_value = model(state)
     m = Categorical(probs)
-    # Escoje la más alta
     action = m.sample()
-    # Guarda el log de la acción para hacer train
-    policy.saved_log_probs.append(m.log_prob(action))
-    # Retorna la acción
+    model.saved_actions.append(SavedAction(m.log_prob(action), state_value))
     return action.item()
 
-def end_of_episode():
-    gamma = 0.99
-    policy_loss = []
+def change_rewards():
+    positive_reward = 1
+    negative_reward = -5
+    flag = False
+    m = len(model.rewards)
+    for i in reversed(range(m)):
+        if model.rewards[i] > 0:
+            flag = True
+        model.rewards[i] = positive_reward if flag else negative_reward
+
+def finish_episode():
+    R = 0
+    saved_actions = model.saved_actions
+    policy_losses = []
+    value_losses = []
     rewards = []
-    discount_reward = 0
-    flag = True
-    for r in policy.rewards[::-1]:
-        if r > 0 and flag:
-            discount_reward = 0
-            flag = False
-        discount_reward = r + gamma * discount_reward
-        rewards.insert(0, discount_reward)
-    
-    #Convierte los rewards a tensor
+    change_rewards()
+    for r in model.rewards[::-1]:
+        R = r + args.gamma * R
+        rewards.insert(0, R)
     rewards = torch.tensor(rewards)
-    # Normaliza el tensor
     rewards = (rewards - rewards.mean()) / (rewards.std() + eps)
-
-    # Saca el policy loss
-    for log_prob, reward in zip(policy.saved_log_probs, rewards):
-        policy_loss.append(-log_prob * reward)
-
+    for (log_prob, value), r in zip(saved_actions, rewards):
+        reward = r - value.item()
+        policy_losses.append(-log_prob * reward)
+        value_losses.append(F.smooth_l1_loss(value, torch.tensor([r])))
     optimizer.zero_grad()
-    policy_loss = torch.cat(policy_loss).sum()
-    policy_loss.backward()
+    loss = torch.stack(policy_losses).sum() + torch.stack(value_losses).sum()
+    loss.backward()
     optimizer.step()
-    del policy.rewards[:]
-    del policy.saved_log_probs[:]
-    return policy_loss.item()
-# Fin Funciones
+    del model.rewards[:]
+    del model.saved_actions[:]
+
+episodes = 1000
+def main():
+    for i_episode in range(episodes):
+        print("Episode", i_episode)
+        state = env.reset()
+        while True:  # Don't infinite loop while learning
+            gray = image_functions.ob_2_gray(state).ravel()
+            action = select_action(gray)
+            state, reward, done, _ = env.step(action)
+            if done:
+                break
+            model.rewards.append(reward)
+            #env.render()
+            
+
+        finish_episode()
+    torch.save(model.state_dict(), weights_file)
 
 
-# Ambiente
-
-env = gym.make('FlappyBird-v0' if len(sys.argv)<2 else sys.argv[1])
-
-episode_count = 10000
-for i in range(episode_count):
-    # Agregarla
-    last_ob = env.reset()
-    #print("Inicio del episodio",i)
-    while True:
-        # 0 va hacia arriba, 1 para abajo
-        #agent.act(ob, reward, done)
-        last_ob_gray = image_functions.ob_2_gray(last_ob).ravel()        
-        action = select_action(last_ob_gray)#random.randint(0,1) #policy(last_ob)
-        ob, reward, done, _ = env.step(action) # reward -5 y done true cuando pierde
-        if done:
-            break
-
-        policy.states.append(last_ob_gray)
-        policy.rewards.append(reward)
-        last_ob = np.abs(ob - last_ob)
-        env.render()
-    
-    policy.pre_end()
-    loss = end_of_episode()
-    #print("Loss del episodio",i,"->",loss)
-    #print("Fin del episodio",i)
-
-env.close()
-
-torch.save(policy.state_dict(), "weights")
-#p.load_state_dict(torch.load('pesos'))
-#save_files.save(p.state_dict, "pesos")
+if __name__ == '__main__':
+    main()

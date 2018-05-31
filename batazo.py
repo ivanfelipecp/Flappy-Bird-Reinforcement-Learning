@@ -5,7 +5,7 @@ import gym_ple
 import numpy as np
 from itertools import count
 from collections import namedtuple
-
+import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -68,8 +68,8 @@ def select_action(state):
     return action.item()
 
 def change_rewards():
-    positive_reward = 5
-    negative_reward = -1
+    positive_reward = 1
+    negative_reward = -5
     flag = False
     m = len(model.rewards)
     for i in reversed(range(m)):
@@ -113,6 +113,7 @@ def main():
                 break
             model.rewards.append(reward)
             #env.render()
+            
 
         finish_episode()
     torch.save(model.state_dict(), weights_file)
