@@ -1,0 +1,23 @@
+Wiki de policy learning y policy gradient:
+
+http://www.scholarpedia.org/article/Policy_gradient_methods
+
+La progra en la que nos "tenemos" que basar:
+
+https://gist.github.com/karpathy/a4166c7fe253700972fcbc77e4ea32c5
+
+En la que me basé:
+
+https://github.com/pytorch/examples/blob/master/reinforcement_learning/reinforce.py
+
+Otra en la que me basé:
+
+https://github.com/pytorch/examples/tree/master/reinforcement_learning
+
+Una forma de implementar policy gradient:
+
+https://discuss.pytorch.org/t/whats-the-right-way-of-implementing-policy-gradient/4003/5
+
+Un código de policy gradient en pytorch:
+
+https://github.com/Finspire13/pytorch-policy-gradient-example/blob/master/pg.py

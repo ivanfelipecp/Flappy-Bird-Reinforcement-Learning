@@ -22,13 +22,15 @@ parser.add_argument('--render', action='store_true',
                     help='render the environment')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='interval between training status logs (default: 10)')
+parser.add_argument('--weights', type=str, default="weights", metavar='Name',
+                    help='Pesos de la red')
 args = parser.parse_args()
 
 
 env = gym.make('FlappyBird-v0')
 env.seed(args.seed)
 torch.manual_seed(args.seed)
-weights_file = "weights"
+weights_file = args.weights
 
 SavedAction = namedtuple('SavedAction', ['log_prob', 'value'])
 
@@ -44,7 +46,7 @@ class Policy(nn.Module):
         self.rewards = []
 
     def forward(self, x):
-        x = F.relu(self.affine1(x))
+        x = F.relu(self.drop1(self.affine1(x)))
         action_scores = self.action_head(x)
         state_values = self.value_head(x)
         return F.softmax(action_scores, dim=-1), state_values
@@ -69,7 +71,7 @@ def select_action(state):
 
 def change_rewards():
     positive_reward = 1
-    negative_reward = -5
+    negative_reward = -1
     flag = False
     m = len(model.rewards)
     for i in reversed(range(m)):
@@ -104,15 +106,16 @@ episodes = 1000
 def main():
     for i_episode in range(episodes):
         print("Episode", i_episode)
-        state = env.reset()
+        last_state = env.reset()
         while True:  # Don't infinite loop while learning
-            gray = image_functions.ob_2_gray(state).ravel()
+            gray = image_functions.ob_2_gray(last_state).ravel()
             action = select_action(gray)
             state, reward, done, _ = env.step(action)
             if done:
                 break
             model.rewards.append(reward)
-            #env.render()
+            last_state = np.abs(state - last_state)
+            env.render()
             
 
         finish_episode()
